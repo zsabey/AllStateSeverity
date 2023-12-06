@@ -4,6 +4,9 @@ library(tidymodels)
 library(embed)
 library(themis)
 
+cl <- parallel::makePSOCKcluster(5)
+parallel::registerDoParallel(cl)
+
 trainCsv <- read_csv("train.csv") %>%
   mutate_at(vars(cat1:cat116), as.factor)
 
@@ -84,4 +87,5 @@ Sub1 <- rf_predictions %>%
 
 write_csv(Sub1, "RFSubmission.csv")
 
+stopCluster(cl)
 
