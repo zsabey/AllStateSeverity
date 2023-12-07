@@ -47,14 +47,32 @@ Type 'q()' to quit R.
 • Use suppressPackageStartupMessages() to eliminate package startup messages
 > library(embed)
 > library(themis)
-> 
+> library(vroom)
+
+Attaching package: ‘vroom’
+
+The following object is masked from ‘package:yardstick’:
+
+    spec
+
+The following object is masked from ‘package:scales’:
+
+    col_factor
+
+The following objects are masked from ‘package:readr’:
+
+    as.col_spec, col_character, col_date, col_datetime, col_double,
+    col_factor, col_guess, col_integer, col_logical, col_number,
+    col_skip, col_time, cols, cols_condense, cols_only, date_names,
+    date_names_lang, date_names_langs, default_locale, fwf_cols,
+    fwf_empty, fwf_positions, fwf_widths, locale, output_column,
+    problems, spec
+
 > 
 > cl <- parallel::makePSOCKcluster(5)
 > doParallel::registerDoParallel(cl)
 > 
-> 
-> trainCsv <- read_csv("train.csv") %>%
-+   mutate_at(vars(cat1:cat116), as.factor)
+> train <- vroom('train.csv')
 Rows: 188318 Columns: 132
 ── Column specification ────────────────────────────────────────────────────────
 Delimiter: ","
@@ -63,9 +81,7 @@ dbl  (16): id, cont1, cont2, cont3, cont4, cont5, cont6, cont7, cont8, cont9...
 
 ℹ Use `spec()` to retrieve the full column specification for this data.
 ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
-> 
-> testCsv <- read_csv("test.csv") %>%
-+   mutate_at(vars(cat1:cat116), as.factor)
+> test <- vroom('test.csv')
 Rows: 125546 Columns: 131
 ── Column specification ────────────────────────────────────────────────────────
 Delimiter: ","
@@ -74,48 +90,60 @@ dbl  (15): id, cont1, cont2, cont3, cont4, cont5, cont6, cont7, cont8, cont9...
 
 ℹ Use `spec()` to retrieve the full column specification for this data.
 ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+> #skimr::skim(train)
+> ### EDA #### 
+> #hist(train$loss)
+> ### Some variables are highly correlated to each other 
+> #plot_correlation(train, type = 'continuous')
+> train$loss <- log(train$loss)
+> ### Initial_Split ####
+> boost <- boost_tree(mode = 'regression', 
++                     learn_rate = tune(),
++                     tree_depth = tune(),
++                     min_n = tune()
++ ) %>%
++   set_engine('xgboost', objective = 'reg:absoluteerror')
+> boost_recipe <- recipe(loss ~ ., train) %>% 
++   update_role(id, new_role = 'ID') %>%
++   step_scale(all_numeric_predictors()) %>%
++   step_corr(all_numeric_predictors(), threshold = .8) %>% 
++   step_novel(all_nominal_predictors()) %>%
++   step_unknown(all_nominal_predictors()) %>%
++   step_dummy(all_nominal_predictors()) %>% 
++   prep()
 > 
+> boost_workflow <- workflow() %>%
++   add_recipe(boost_recipe) %>%
++   add_model(boost) 
 > 
-> #Create the recipe and bake it
+> prepped <- prep(boost_recipe)
+> baked <- bake(prepped, new_data = NULL)
+> baked
+# A tibble: 188,318 × 1,267
+      id cont1 cont2 cont3 cont4 cont5 cont7 cont8 cont11 cont13 cont14  loss
+   <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>  <dbl>  <dbl>  <dbl> <dbl>
+ 1     1  3.87 1.19  0.928 3.74   1.48  1.88  1.52  2.72   3.87    3.21  7.70
+ 2     2  1.76 3.56  2.93  2.91   4.24  2.45  3.01  1.61   2.87    1.37  7.16
+ 3     5  1.40 1.73  2.40  1.12   1.90  1.77  1.37  1.82   0.920   3.48  8.01
+ 4    10  1.71 2.68  2.61  1.77   2.02  2.19  1.59  1.56   2.84    2.71  6.85
+ 5    11  1.46 0.772 2.61  2.24   3.37  1.39  1.23  0.976  1.16    1.94  7.92
+ 6    13  2.91 3.29  3.14  1.77   1.45  2.25  1.35  1.75   1.62    3.27  8.55
+ 7    14  2.51 3.56  3.04  0.895  1.41  2.04  1.23  1.60   1.61    1.72  7.03
+ 8    20  4.41 2.36  1.30  2.95   2.27  3.27  4.53  3.07   4.04    1.09  8.18
+ 9    23  1.76 2.68  2.18  2.24   1.35  2.15  3.07  3.25   3.56    1.62  9.24
+10    24  3.87 1.73  1.77  3.80   1.48  2.63  1.52  4.11   3.87    1.32  8.73
+# ℹ 188,308 more rows
+# ℹ 1,255 more variables: cat1_B <dbl>, cat1_new <dbl>, cat1_unknown <dbl>,
+#   cat2_B <dbl>, cat2_new <dbl>, cat2_unknown <dbl>, cat3_B <dbl>,
+#   cat3_new <dbl>, cat3_unknown <dbl>, cat4_B <dbl>, cat4_new <dbl>,
+#   cat4_unknown <dbl>, cat5_B <dbl>, cat5_new <dbl>, cat5_unknown <dbl>,
+#   cat6_B <dbl>, cat6_new <dbl>, cat6_unknown <dbl>, cat7_B <dbl>,
+#   cat7_new <dbl>, cat7_unknown <dbl>, cat8_B <dbl>, cat8_new <dbl>, …
 > 
-> boost_recipe <- recipe(loss ~ ., data=trainCsv) %>%
-+   #step_other(all_nominal_predictors(), threshold = .001) %>% # combines categorical values that occur <5% into an "other" value
-+   step_lencode_mixed(all_nominal_predictors(), outcome = vars(loss))%>%
-+   step_zv() %>%
-+   step_normalize(all_predictors()) #%>%
->   #step_pca(all_predictors(), threshold = .01)
-> #step_smote(all_outcomes(), neighbors=5)
-> 
-> 
-> 
-> 
-> #Set up the model
-> boost_model <- boost_tree(tree_depth=tune(),
-+                          trees=tune(),
-+                          learn_rate=tune()) %>%
-+   set_engine("xgboost") %>% #or "xgboost" but lightgbm is faster
-+   set_mode("regression")
 > 
 > ## Create a workflow with model & recipe
 > boost_workflow <- workflow() %>%
 +   add_recipe(boost_recipe) %>%
 +   add_model(boost_model) 
-> 
-> 
-> 
-> ## Set up grid of tuning values
-> 
-> #CV Results 1,23
-> tuning_grid <- grid_regular(tree_depth(),
-+                             trees(),
-+                             learn_rate(),
-+                             levels = 3)## L^2 total tuning possibilities
-> 
-> ## Set up K-fold CV
-> folds <- vfold_cv(trainCsv, v = 3, repeats=1)
-> 
-> ## Run the CV
-> CV_results <- boost_workflow %>%
-+   tune_grid(resamples=folds,
-+             grid=tuning_grid,
-+             metrics=metric_set(mae)) #Or leave metrics NULL
+Error: object 'boost_model' not found
+Execution halted
