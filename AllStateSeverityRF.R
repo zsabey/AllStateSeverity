@@ -3,14 +3,14 @@ library(tidyverse)
 library(tidymodels)
 library(embed)
 library(themis)
+library(doParallel)
 
 cl <- parallel::makePSOCKcluster(5)
-parallel::registerDoParallel(cl)
+doparallel::registerDoParallel(cl)
 
 trainCsv <- read_csv("train.csv") %>%
   mutate_at(vars(cat1:cat116), as.factor)
 
-view(trainCsv)
 testCsv <- read_csv("test.csv") %>%
   mutate_at(vars(cat1:cat116), as.factor)
 
@@ -19,7 +19,9 @@ testCsv <- read_csv("test.csv") %>%
 
 rf_recipe <- recipe(loss ~ ., data=trainCsv) %>%
   #step_other(all_nominal_predictors(), threshold = .001) %>% # combines categorical values that occur <5% into an "other" value
-  step_lencode_mixed(all_nominal_predictors(), outcome = vars(loss)) #%>%
+  step_lencode_mixed(all_nominal_predictors(), outcome = vars(loss)) %>%
+  step_normalize(all_predictors()) %>%
+  step_pca(all_predictors(), threshold = .01)#%>%
 #step_smote(all_outcomes(), neighbors=5)
 
 prep <- prep(rf_recipe)
@@ -29,9 +31,9 @@ baked
 
 
 #Set up the model
-my_mod <- rand_forest(mtry = tune(),
-                      min_n=tune(),
-                      trees=1000) %>%
+my_mod <- rand_forest(mtry = 5,
+                      min_n=20,
+                      trees=500) %>%
   set_engine("ranger") %>%
   set_mode("regression")
 
@@ -83,10 +85,9 @@ rf_predictions <- final_wf %>%
 Sub1 <- rf_predictions %>% 
   bind_cols(testCsv) %>% 
   select(id,.pred_1) %>%
-  rename(Id= id, Action = .pred_1)
+  rename(loss = .pred_1)
 
 
 write_csv(Sub1, "RFSubmission.csv")
 
 stopCluster(cl)
-
