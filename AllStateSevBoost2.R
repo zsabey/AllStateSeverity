@@ -24,7 +24,7 @@ boost <- boost_tree(mode = 'regression',
                     min_n = tune()
 ) %>%
   set_engine('xgboost', objective = 'reg:absoluteerror')
-recipe <- recipe(loss ~ ., train) %>% 
+boost_recipe <- recipe(loss ~ ., train) %>% 
   update_role(id, new_role = 'ID') %>%
   step_scale(all_numeric_predictors()) %>%
   step_corr(all_numeric_predictors(), threshold = .6) %>% 
@@ -33,7 +33,9 @@ recipe <- recipe(loss ~ ., train) %>%
   step_dummy(all_nominal_predictors()) %>% 
   prep()
 
-bake(recipe, new_data = NULL)
+boost_workflow <- workflow() %>%
+  add_recipe(boost_recipe) %>%
+  add_model(boost) 
 
 
 ## Set up grid of tuning values
