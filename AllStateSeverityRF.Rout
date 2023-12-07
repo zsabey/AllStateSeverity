@@ -152,3 +152,107 @@ boundary (singular) fit: see help('isSingular')
 → A | warning: unable to evaluate scaled gradient, Model failed to converge: degenerate  Hessian with 1 negative eigenvalues
 Tboundary (singular) fit: see help('isSingular')
 boundary (singular) fit: see help('isSingular')
+boundary (singular) fit: see help('isSingular')
+There were issues with some computations   A: x1There were issues with some computations   A: x1
+
+> 
+> ## Find best tuning parameters
+> collect_metrics(CV_results) %>% # Gathers metrics into DF
++   filter(.metric=="mae") %>%
++   ggplot(data=., aes(x=mtry, y=min_n, color=factor(mtry))) +
++   geom_line()
+> 
+> collect_metrics(CV_results)
+# A tibble: 25 × 8
+    mtry min_n .metric .estimator  mean     n std_err .config              
+   <int> <int> <chr>   <chr>      <dbl> <int>   <dbl> <chr>                
+ 1     1     2 mae     standard   1635.     3   11.5  Preprocessor1_Model01
+ 2     2     2 mae     standard   1383.     3    6.49 Preprocessor1_Model02
+ 3     3     2 mae     standard   1293.     3    4.45 Preprocessor1_Model03
+ 4     4     2 mae     standard   1257.     3    4.25 Preprocessor1_Model04
+ 5     5     2 mae     standard   1241.     3    3.62 Preprocessor1_Model05
+ 6     1    11 mae     standard   1636.     3   10.8  Preprocessor1_Model06
+ 7     2    11 mae     standard   1386.     3    5.45 Preprocessor1_Model07
+ 8     3    11 mae     standard   1297.     3    4.53 Preprocessor1_Model08
+ 9     4    11 mae     standard   1261.     3    4.34 Preprocessor1_Model09
+10     5    11 mae     standard   1245.     3    4.12 Preprocessor1_Model10
+# ℹ 15 more rows
+> 
+> CV_results
+# Tuning results
+# 3-fold cross-validation 
+# A tibble: 3 × 4
+  splits                 id    .metrics          .notes          
+  <list>                 <chr> <list>            <list>          
+1 <split [125545/62773]> Fold1 <tibble [25 × 6]> <tibble [1 × 3]>
+2 <split [125545/62773]> Fold2 <tibble [25 × 6]> <tibble [0 × 3]>
+3 <split [125546/62772]> Fold3 <tibble [25 × 6]> <tibble [0 × 3]>
+
+There were issues with some computations:
+
+  - Warning(s) x1: unable to evaluate scaled gradient, Model failed to converge: deg...
+
+Run `show_notes(.Last.tune.result)` for more information.
+> ## Find Best Tuning Parameters
+> bestTune <- CV_results %>%
++   select_best("mae")
+> bestTune
+# A tibble: 1 × 3
+   mtry min_n .config              
+  <int> <int> <chr>                
+1     5     2 Preprocessor1_Model05
+> 
+> ## Finalize the Workflow & fit it
+> final_wf <- rf_workflow %>%
++   finalize_workflow(bestTune) %>%
++   fit(data=trainCsv)
+boundary (singular) fit: see help('isSingular')
+Warning messages:
+1: In optwrap(optimizer, devfuWarning messages:
+1: In optwrap(optimizer, devfun, getStart(start, rho$pp), lower = rho$lower,  :
+  convergence code -4 from nloptwrap: NLOPT_ROUNDOFF_LIMITED: Roundoff errors led to a breakdown of the optimization algorithm. In this case, the returned minimum may still be useful. (e.g. this error occurs in NEWUOA if one tries to achieve a tolerance too close to machine precision.)
+2: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+  unable to evaluate scaled gradient
+3: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+  Model failed to converge: degenerate  Hessian with 1 negative eigenvalues
+4: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+  unable to evaluate scaled gradient
+5: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+  Model failed to converge: degenerate  Hessian with 1 negative eigenvalues
+> 
+> rf_predictions <- final_wf %>%
++   predict(new_data = testCsv)
+There were 11 warnings (use warnings() to see them)
+> 
+> Sub1 <- rf_predictions %>% 
++   bind_cols(testCsv) %>% 
++   select(id,.pred_1) %>%
++   rename(Id= id, Action = .pred_1)
+Error in `select()`:
+! Can't subset columns that don't exist.
+✖ Column `.pred_1` doesn't exist.
+Backtrace:
+     ▆
+  1. ├─... %>% rename(Id = id, Action = .pred_1)
+  2. ├─dplyr::rename(., Id = id, Action = .pred_1)
+  3. ├─dplyr::select(., id, .pred_1)
+  4. ├─dplyr:::select.data.frame(., id, .pred_1)
+  5. │ └─tidyselect::eval_select(expr(c(...)), data = .data, error_call = error_call)
+  6. │   └─tidyselect:::eval_select_impl(...)
+  7. │     ├─tidyselect:::with_subscript_errors(...)
+  8. │     │ └─rlang::try_fetch(...)
+  9. │     │   └─base::withCallingHandlers(...)
+ 10. │     └─tidyselect:::vars_select_eval(...)
+ 11. │       └─tidyselect:::walk_data_tree(expr, data_mask, context_mask)
+ 12. │         └─tidyselect:::eval_c(expr, data_mask, context_mask)
+ 13. │           └─tidyselect:::reduce_sels(node, data_mask, context_mask, init = init)
+ 14. │             └─tidyselect:::walk_data_tree(new, data_mask, context_mask)
+ 15. │               └─tidyselect:::as_indices_sel_impl(...)
+ 16. │                 └─tidyselect:::as_indices_impl(...)
+ 17. │                   └─tidyselect:::chr_as_locations(x, vars, call = call, arg = arg)
+ 18. │                     └─vctrs::vec_as_location(...)
+ 19. └─vctrs (local) `<fn>`()
+ 20.   └─vctrs:::stop_subscript_oob(...)
+ 21.     └─vctrs:::stop_subscript(...)
+ 22.       └─rlang::abort(...)
+Execution halted
