@@ -46,7 +46,7 @@ tuning_grid <- grid_regular(tree_depth(),
                             levels = 5)## L^2 total tuning possibilities
 
 ## Set up K-fold CV
-folds <- vfold_cv(trainCsv, v = 3, repeats=1)
+folds <- vfold_cv(train, v = 3, repeats=1)
 
 ## Run the CV
 CV_results <- boost_workflow %>%
@@ -62,14 +62,14 @@ bestTune
 ## Finalize the Workflow & fit it
 final_wf <- boost_workflow %>%
   finalize_workflow(bestTune) %>%
-  fit(data=trainCsv)
+  fit(data=train)
 
 boost_predictions <- final_wf %>%
-  predict(new_data = testCsv)
+  predict(new_data = test)
 
 
 Sub1 <- boost_predictions %>% 
-  bind_cols(testCsv) %>% 
+  bind_cols(test) %>% 
   select(id,.pred) %>%
   rename(loss = .pred)
 

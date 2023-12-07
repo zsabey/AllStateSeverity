@@ -8,10 +8,10 @@ library(doParallel)
 cl <- parallel::makePSOCKcluster(5)
 doparallel::registerDoParallel(cl)
 
-trainCsv <- read_csv("train.csv") %>%
+train <- read_csv("train.csv") %>%
   mutate_at(vars(cat1:cat116), as.factor)
 
-testCsv <- read_csv("test.csv") %>%
+test <- read_csv("test.csv") %>%
   mutate_at(vars(cat1:cat116), as.factor)
 
 
@@ -43,7 +43,7 @@ my_mod <- rand_forest(mtry = 5,
 rf_wf <- workflow() %>%
   add_recipe(rf_recipe) %>%
   add_model(my_mod) %>%
-  fit(data=trainCsv)
+  fit(data=train)
   
   
   
@@ -55,7 +55,7 @@ rf_wf <- workflow() %>%
 #                               levels = 5)## L^2 total tuning possibilities
 # 
 # ## Set up K-fold CV
-# folds <- vfold_cv(trainCsv, v = 3, repeats=1)
+# folds <- vfold_cv(train, v = 3, repeats=1)
 # 
 # ## Run the CV
 # CV_results <- rf_workflow %>%
@@ -80,13 +80,13 @@ rf_wf <- workflow() %>%
 # ## Finalize the Workflow & fit it
 # final_wf <- rf_workflow %>%
 #   finalize_workflow(bestTune) %>%
-#   fit(data=trainCsv)
+#   fit(data=train)
 
 rf_predictions <- rf_wf %>%
-  predict(new_data = testCsv)
+  predict(new_data = test)
 
 Sub1 <- rf_predictions %>% 
-  bind_cols(testCsv) %>% 
+  bind_cols(test) %>% 
   select(id,.pred) %>%
   rename(loss = .pred)
 
