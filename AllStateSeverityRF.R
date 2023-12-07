@@ -8,21 +8,14 @@ library(doParallel)
 cl <- parallel::makePSOCKcluster(5)
 doParallel::registerDoParallel(cl)
 
-train <- read_csv("train.csv") %>%
-  mutate_at(vars(cat1:cat116), as.factor)
-
-test <- read_csv("test.csv") %>%
-  mutate_at(vars(cat1:cat116), as.factor)
-
+train <- vroom('train.csv')
+test <- vroom('test.csv')
 
 #Create the recipe and bake it
 
-rf_recipe <- recipe(loss ~ ., data=trainCsv) %>%
+rf_recipe <- recipe(loss ~ ., data=train) %>%
   step_lencode_mixed(all_nominal_predictors(), outcome = vars(loss))
 
-prep <- prep(rf_recipe)
-baked <- bake(prep, new_data = NULL)
-baked
 
 
 
