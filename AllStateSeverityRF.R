@@ -3,6 +3,7 @@ library(tidyverse)
 library(tidymodels)
 library(embed)
 library(themis)
+library(vroom)
 library(doParallel)
 
 cl <- parallel::makePSOCKcluster(5)
