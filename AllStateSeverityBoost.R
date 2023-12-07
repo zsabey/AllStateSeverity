@@ -17,7 +17,7 @@ test <- vroom('test.csv')
 #plot_correlation(train, type = 'continuous')
 train$loss <- log(train$loss)
 ### Initial_Split ####
-boost <- boost_tree(mode = 'regression', 
+boost_model <- boost_tree(mode = 'regression', 
                     learn_rate = tune(),
                     tree_depth = tune(),
                     min_n = tune()
@@ -34,7 +34,7 @@ boost_recipe <- recipe(loss ~ ., train) %>%
 
 boost_workflow <- workflow() %>%
   add_recipe(boost_recipe) %>%
-  add_model(boost) 
+  add_model(boost_model) 
 
 prepped <- prep(boost_recipe)
 baked <- bake(prepped, new_data = NULL)

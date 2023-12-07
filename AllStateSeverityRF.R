@@ -6,7 +6,7 @@ library(themis)
 library(doParallel)
 
 cl <- parallel::makePSOCKcluster(5)
-doparallel::registerDoParallel(cl)
+doParallel::registerDoParallel(cl)
 
 train <- read_csv("train.csv") %>%
   mutate_at(vars(cat1:cat116), as.factor)
@@ -17,14 +17,8 @@ test <- read_csv("test.csv") %>%
 
 #Create the recipe and bake it
 
-rf_recipe <- recipe(loss ~ ., train) %>% 
-  update_role(id, new_role = 'ID') %>%
-  step_scale(all_numeric_predictors()) %>%
-  step_corr(all_numeric_predictors(), threshold = .6) %>% 
-  step_novel(all_nominal_predictors()) %>%
-  step_unknown(all_nominal_predictors()) %>%
-  step_dummy(all_nominal_predictors()) %>% 
-  prep()
+rf_recipe <- recipe(loss ~ ., data=trainCsv) %>%
+  step_lencode_mixed(all_nominal_predictors(), outcome = vars(loss))
 
 prep <- prep(rf_recipe)
 baked <- bake(prep, new_data = NULL)

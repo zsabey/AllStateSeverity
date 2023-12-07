@@ -43,7 +43,7 @@ boost_workflow <- workflow() %>%
 #CV Results 1,23
 tuning_grid <- grid_regular(tree_depth(),
                             loss_reduction(),
-                            trees(),
+                            min_n(),
                             learn_rate(),
                             levels = 5)## L^2 total tuning possibilities
 
@@ -77,5 +77,6 @@ Sub1 <- boost_predictions %>%
 
 
 write_csv(Sub1, "boostSubmission.csv")
+
 stopCluster(cl)
 
